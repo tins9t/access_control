@@ -20,6 +20,15 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddAuthorization();
 
+
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+builder.Services.AddSingleton(new JwtTokenService(
+    jwtSettings["SecretKey"],
+    jwtSettings["Issuer"],
+    jwtSettings["Audience"]
+));
+
+
 builder
     .Services.AddIdentityApiEndpoints<IdentityUser>(options =>
     {

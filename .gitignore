@@ -3,3 +3,4 @@ obj/
 .idea/
 app/
 db.sqlite*
+appsettings.Development.json

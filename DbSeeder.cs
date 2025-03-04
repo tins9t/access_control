@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using ssd_authorization_solution.Entities;
 
 namespace ssd_authorization_solution;
@@ -68,6 +69,8 @@ public class DbSeeder
                 Article = article2
             }
         );
+        
+        await CreatePermissionsAsync();
 
         ctx.SaveChanges();
     }
@@ -89,6 +92,57 @@ public class DbSeeder
         if (user != null)
             await userManager.AddToRoleAsync(user!, role!);
         return user!;
+    }
+    
+    
+  private async Task CreatePermissionsAsync()
+{
+    await ctx.Database.EnsureCreatedAsync();
+
+    var roles = new List<string> { "writer", "editor", "subscriber" };
+
+    foreach (var roleName in roles)
+    {
+        if (!await roleManager.RoleExistsAsync(roleName))
+        {
+            await roleManager.CreateAsync(new IdentityRole(roleName));
+        }
+    }
+
+    if (!await ctx.RoleClaims.AnyAsync())
+    {
+        var roleClaims = new List<IdentityRoleClaim<string>>();
+
+        foreach (var roleName in roles)
+        {
+            var role = await roleManager.FindByNameAsync(roleName);
+            if (role != null)
+            {
+                switch (roleName)
+                {
+                    case "writer":
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "article.read" });
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "article.write" });
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "comment.read" });
+                        break;
+                    case "editor":
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "article.read" });
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "article.write" });
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "article.delete" });
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "comment.read" });
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "comment.write" });
+                        break;
+                    case "subscriber":
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "comment.read" });
+                        roleClaims.Add(new IdentityRoleClaim<string> { RoleId = role.Id, ClaimType = "Permission", ClaimValue = "comment.write" });
+                        break;
+                }
+            }
+        }
+
+        ctx.RoleClaims.AddRange(roleClaims);
+        await ctx.SaveChangesAsync();
+        }
     }
 }
 
