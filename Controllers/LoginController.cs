@@ -6,13 +6,13 @@ namespace ssd_authorization_solution.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class LoginController : ControllerBase
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly JwtTokenService _jwtTokenService;
 
-        public AuthController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager,
+        public LoginController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager,
             JwtTokenService jwtTokenService)
         {
             _userManager = userManager;
@@ -35,14 +35,7 @@ namespace ssd_authorization_solution.Controllers
             var roles = await _userManager.GetRolesAsync(user);
             var role = roles.FirstOrDefault();
 
-            // Retrieve the permissions associated with the user's roles
-            var roleClaims = await _userManager.GetClaimsAsync(user);
-            var permissions = roleClaims
-                .Where(rc => rc.Type == "Permission")
-                .Select(rc => rc.Value)
-                .ToList();
-
-            var sessionData = new SessionData(user.UserName, role, permissions);
+            var sessionData = new SessionData(user.Id, role);
 
             var token = _jwtTokenService.GenerateJwtToken(sessionData);
 

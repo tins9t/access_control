@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ssd_authorization_solution.DTOs;
@@ -33,6 +35,7 @@ public class ArticleController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Writer")]
     public ArticleDto Post([FromBody] ArticleFormDto dto)
     {
         var userName = HttpContext.User.Identity?.Name;
@@ -50,17 +53,52 @@ public class ArticleController : ControllerBase
     }
 
     [HttpPut(":id")]
-    public ArticleDto Put(int id, [FromBody] ArticleFormDto dto)
+    [Authorize(Roles = "Writer,Editor")]
+    public IActionResult Put(int id, [FromBody] ArticleFormDto dto)
     {
+        // Fetch userId and role from token
+        var userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value; 
+        var role = User.FindFirst("role")?.Value;
+        
         var userName = HttpContext.User.Identity?.Name;
         var entity = db
             .Articles
             .Include(x => x.Author)
             .Single(x => x.Id == id);
+        
+        if (role == "Writer" && entity.AuthorId != userId)
+        {
+           
+            return Forbid(); 
+        }
+        
         entity.Title = dto.Title;
         entity.Content = dto.Content;
         var updated = db.Articles.Update(entity).Entity;
         db.SaveChanges();
-        return ArticleDto.FromEntity(updated);
+        
+        return Ok(ArticleDto.FromEntity(updated));
+    }
+    
+    [HttpDelete("{id}")] 
+    [Authorize(Roles = "Writer,Editor")] 
+    public IActionResult Delete(int id)
+    {
+        var entity = db.Articles.SingleOrDefault(x => x.Id == id);
+        
+        // Fetch the current user role and userId from the token
+        var userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var role = User.FindFirst("role")?.Value;
+        
+        if (role == "Writer" && entity.AuthorId != userId)
+        {
+           
+            return Forbid(); 
+        }
+
+        db.Articles.Remove(entity);
+        db.SaveChanges();
+
+        return Ok(new { message = "Article deleted successfully" });
     }
 }

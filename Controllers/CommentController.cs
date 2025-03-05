@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,7 @@ public class CommentController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Writer,Editor,Subscriber")]
     public IEnumerable<CommentDto> Get([FromQuery] int? articleId)
     {
         var query = db.Comments.Include(x => x.Author).AsQueryable();
@@ -28,6 +30,7 @@ public class CommentController : ControllerBase
     }
 
     [HttpGet(":id")]
+    [Authorize(Roles = "Writer,Editor,Subscriber")]
     public CommentDto? GetById(int id)
     {
         return db
@@ -37,6 +40,7 @@ public class CommentController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Subscriber")]
     public CommentDto Post([FromBody] CommentFormDto dto)
     {
         var userName = HttpContext.User.Identity?.Name;
@@ -54,16 +58,49 @@ public class CommentController : ControllerBase
     }
 
     [HttpPut(":id")]
-    public CommentDto Put(int id, [FromBody] CommentFormDto dto)
+    [Authorize(Roles = "Subscriber,Editor")]
+    public IActionResult Put(int id, [FromBody] CommentFormDto dto)
     {
+        var userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value; 
+        var role = User.FindFirst("role")?.Value;
+        
         var userName = HttpContext.User.Identity?.Name;
         var entity = db
             .Comments.Include(x => x.Author)
             .Where(x => x.Author.UserName == userName)
             .Single(x => x.Id == id);
+        
+        if (role == "Subscriber" && entity.AuthorId != userId)
+        {
+           
+            return Forbid(); 
+        }
+        
         entity.Content = dto.Content;
         var updated = db.Comments.Update(entity).Entity;
         db.SaveChanges();
-        return CommentDto.FromEntity(updated);
+        return Ok(CommentDto.FromEntity(updated));
+    }
+    
+    [HttpDelete("{id}")]  
+    [Authorize(Roles = "Subscriber,Editor")]  
+    public IActionResult DeleteComment(int id)
+    {
+        var entity = db.Comments.Include(x => x.Author).SingleOrDefault(x => x.Id == id);
+
+        // Fetch the current user role and userId from the token
+        var userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var role = User.FindFirst("role")?.Value;
+        
+        if (role == "Subscriber" && entity.AuthorId != userId)
+        {
+           
+            return Forbid(); 
+        }
+        
+        db.Comments.Remove(entity);
+        db.SaveChanges();
+
+        return Ok(new { message = "Comment deleted successfully" });
     }
 }
