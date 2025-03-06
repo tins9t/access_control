@@ -71,7 +71,6 @@ public class ArticleController : ControllerBase
 
         if (User.IsInRole(Roles.Writer) && entity.AuthorId != author.Id)
         {
-           
             return Forbid(); 
         }
         
@@ -100,7 +99,6 @@ public class ArticleController : ControllerBase
         
         if (User.IsInRole(Roles.Writer) && entity.AuthorId != author.Id)
         {
-           
             return Forbid(); 
         }
 

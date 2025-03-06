@@ -76,7 +76,6 @@ public class CommentController : ControllerBase
 
         if (User.IsInRole(Roles.Subscriber) && entity.AuthorId != author.Id)
         {
-           
             return Forbid(); 
         }
         
@@ -103,7 +102,6 @@ public class CommentController : ControllerBase
         
         if (User.IsInRole(Roles.Subscriber) && entity.AuthorId != author.Id)
         {
-           
             return Forbid(); 
         }
         
