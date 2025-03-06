@@ -16,16 +16,16 @@ Set `useCookies` and `useSessionCookies` to true for login.
 
 Initially, I tried to set up token-based authentication using JWT, but switched to using ASP.NET core Identity instead.
 
-## Artice
+## Article
 
-/GET should be accessable for all
-/POST is only accessable for Writer
-/PUT is accessable for Editor and only for Writer if authorId matches userId
-/DELETE is accessable for Editor and only for Writer if authorId matches userId
+- `/GET` should be accessible for all  
+- `/POST` is only accessible for Writer  
+- `/PUT` is accessible for Editor and only for Writer if `authorId` matches `userId`  
+- `/DELETE` is accessible for Editor and only for Writer if `authorId` matches `userId`  
 
 ## Comment
 
-/GET is accessable for authenticated users
-/POST is accessable for Subscriber
-/PUT is accessable for Editor and only for Subscriber if authorId matches userId
-/DELETE is accessable for Editor and only for Subscriber if authorId matches userId
+- `/GET` is accessible for authenticated users  
+- `/POST` is accessible for Subscriber  
+- `/PUT` is accessible for Editor and only for Subscriber if `authorId` matches `userId`  
+- `/DELETE` is accessible for Editor and only for Subscriber if `authorId` matches `userId`  
