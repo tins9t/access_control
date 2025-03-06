@@ -1,6 +1,12 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using ssd_authorization_solution;
+using ssd_authorization_solution.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,13 +26,30 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddAuthorization();
 
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-builder.Services.AddSingleton(new JwtTokenService(
-    jwtSettings["SecretKey"],
-    jwtSettings["Issuer"],
-    jwtSettings["Audience"]
-));
+builder.Services.AddSingleton<JwtTokenService>(sp =>
+{
+    var jwtSettings = sp.GetRequiredService<IOptions<JwtSettings>>().Value;
+    return new JwtTokenService(jwtSettings.SecretKey, jwtSettings.Issuer, jwtSettings.Audience);
+});
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+
+        options.RequireHttpsMetadata = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
+        };
+    });
 
 
 builder
@@ -35,7 +58,8 @@ builder
         options.SignIn.RequireConfirmedAccount = false;
     })
     .AddRoles<IdentityRole>()
-    .AddEntityFrameworkStores<AppDbContext>();
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
 
 var app = builder.Build();
 

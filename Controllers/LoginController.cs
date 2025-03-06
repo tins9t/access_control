@@ -35,7 +35,7 @@ namespace ssd_authorization_solution.Controllers
             var roles = await _userManager.GetRolesAsync(user);
             var role = roles.FirstOrDefault();
 
-            var sessionData = new SessionData(user.Id, role);
+            var sessionData = new SessionData(user.UserName, user.Id, role);
 
             var token = _jwtTokenService.GenerateJwtToken(sessionData);
 

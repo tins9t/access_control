@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -56,17 +56,20 @@ public class ArticleController : ControllerBase
     [Authorize(Roles = "Writer,Editor")]
     public IActionResult Put(int id, [FromBody] ArticleFormDto dto)
     {
-        // Fetch userId and role from token
-        var userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value; 
-        var role = User.FindFirst("role")?.Value;
-        
         var userName = HttpContext.User.Identity?.Name;
         var entity = db
             .Articles
             .Include(x => x.Author)
             .Single(x => x.Id == id);
         
-        if (role == "Writer" && entity.AuthorId != userId)
+        var author = db.Users.Single(x => x.UserName == userName);
+
+        if (entity == null)
+        {
+            return NotFound();
+        }
+
+        if (User.IsInRole(Roles.Writer) && entity.AuthorId != author.Id)
         {
            
             return Forbid(); 
@@ -86,11 +89,16 @@ public class ArticleController : ControllerBase
     {
         var entity = db.Articles.SingleOrDefault(x => x.Id == id);
         
-        // Fetch the current user role and userId from the token
-        var userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-        var role = User.FindFirst("role")?.Value;
+        var userName = HttpContext.User.Identity?.Name;
+        var author = db.Users.Single(x => x.UserName == userName);
+
         
-        if (role == "Writer" && entity.AuthorId != userId)
+        if (entity == null)
+        {
+            return NotFound();
+        }
+        
+        if (User.IsInRole(Roles.Writer) && entity.AuthorId != author.Id)
         {
            
             return Forbid(); 

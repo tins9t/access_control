@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -61,16 +61,20 @@ public class CommentController : ControllerBase
     [Authorize(Roles = "Subscriber,Editor")]
     public IActionResult Put(int id, [FromBody] CommentFormDto dto)
     {
-        var userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value; 
-        var role = User.FindFirst("role")?.Value;
-        
         var userName = HttpContext.User.Identity?.Name;
         var entity = db
             .Comments.Include(x => x.Author)
             .Where(x => x.Author.UserName == userName)
             .Single(x => x.Id == id);
         
-        if (role == "Subscriber" && entity.AuthorId != userId)
+        var author = db.Users.Single(x => x.UserName == userName);
+        
+        if (entity == null)
+        {
+            return NotFound();
+        }
+
+        if (User.IsInRole(Roles.Subscriber) && entity.AuthorId != author.Id)
         {
            
             return Forbid(); 
@@ -87,12 +91,17 @@ public class CommentController : ControllerBase
     public IActionResult DeleteComment(int id)
     {
         var entity = db.Comments.Include(x => x.Author).SingleOrDefault(x => x.Id == id);
-
-        // Fetch the current user role and userId from the token
-        var userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-        var role = User.FindFirst("role")?.Value;
         
-        if (role == "Subscriber" && entity.AuthorId != userId)
+        var userName = HttpContext.User.Identity?.Name;
+        var author = db.Users.Single(x => x.UserName == userName);
+
+        
+        if (entity == null)
+        {
+            return NotFound();
+        }
+        
+        if (User.IsInRole(Roles.Subscriber) && entity.AuthorId != author.Id)
         {
            
             return Forbid(); 
